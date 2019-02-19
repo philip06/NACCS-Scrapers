@@ -7,12 +7,11 @@ from pprint import pprint
     
 # class used to pull in fresh data at given interval (seconds)
 class Scoreboard:
-    def __init__(self, match_url, refresh_rate=5):
+    def __init__(self, match_url):
         self.scoreboard_log = logging.getLogger("scoreboard_log")
         logging.basicConfig(filename='scoreboard.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
         
         self.match_url = match_url
-        self.refresh_rate = refresh_rate
         
         user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.517 Safari/537.36'
         self.headers = {
@@ -21,19 +20,23 @@ class Scoreboard:
     
     # method to create feed updated at set interval
     # TODO
-    def get_data_feed(self):
+    def get_data_feed(self, refresh_rate=5):
         print("get_data_feed")
 
     # method to pull in a fresh proxy
     # TODO
-    def get_proxy(self, retry_count=1):
-        req_url = "http://pubproxy.com/api/proxy"
+    def get_proxy(self, retry_count=2):
+        req_url = "https://gimmeproxy.com/api/getProxy"
         while retry_count >= 0:
-            ret_body = requests.get(req_url).text
-            pprint(ret_body)
-            ret_json = json.loads(ret_body)
-            pprint(ret_json["ip"])
-            break
+            try:
+                ret_body = requests.get(req_url).text
+                ret_json = json.loads(ret_body)
+                ip_port = ret_json["ipPort"]
+                protocol = ret_json["protocol"]
+                return {protocol: ip_port}
+            except Exception as e:
+                self.scoreboard_log.warning(e)
+                retry_count -= 1
     
     # parses generic html table for header data and table data
     def parse_html_table(self, table):
@@ -58,8 +61,10 @@ class Scoreboard:
     
     # method run on each refresh to collect new data
     # TODO: add proper error handling
-    def get_scoreboards(self, proxies_dict):
+    def get_scoreboards(self, proxy_retry_count=2):
         try:
+            proxies_dict = self.get_proxy()
+            pprint(proxies_dict)
             response = requests.get(self.match_url, headers=self.headers, proxies=proxies_dict)
             page_soup = soup(response.text, "html.parser")
             page_soup = page_soup.find("div", {"id": "stats-match-view"})
@@ -103,7 +108,15 @@ class Scoreboard:
         except Exception as e:
             self.scoreboard_log.error(e)
             return "Error"
-            
+      
+# for proxy checking
+# try:
+#     urllib.urlopen(
+#         "http://example.com",
+#         proxies={'http':'http://example.com:8080'}
+#     )
+# except IOError:
+#     print "Connection error! (Check proxy)"
 req_url = "https://play.esea.net/match/14570353"
 
 proxies_dict = {
@@ -111,5 +124,7 @@ proxies_dict = {
                 }
         
 s = Scoreboard(req_url)
-s.get_scoreboards(proxies_dict)
+scoreboard_json = s.get_scoreboards()
+pprint(scoreboard_json)
+# s.get_proxy()
 # proxy = get_proxy(retry_count=1)
