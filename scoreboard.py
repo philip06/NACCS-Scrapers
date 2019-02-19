@@ -101,15 +101,6 @@ class Scoreboard:
         except Exception as e:
             self.scoreboard_log.error(e)
             return "Error"
-      
-# for proxy checking
-# try:
-#     urllib.urlopen(
-#         "http://example.com",
-#         proxies={'http':'http://example.com:8080'}
-#     )
-# except IOError:
-#     print "Connection error! (Check proxy)"
 
 if __name__ == "__main__":
     req_url = "https://play.esea.net/match/14570353"
